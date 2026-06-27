@@ -66,9 +66,14 @@ def webhook():
 
 if __name__ == "__main__":
     port = int(os.environ.get("PORT", 5000))
+    render_url = os.environ.get("RENDER_EXTERNAL_URL", "https://tick-bot-s50p.onrender.com")
 
     import asyncio
     asyncio.run(application.initialize())
     asyncio.run(application.start())
+
+    webhook_url = f"{render_url}/{WEBHOOK_SECRET}"
+    asyncio.run(application.bot.set_webhook(url=webhook_url))
+    logging.info(f"Webhook set to: {webhook_url}")
 
     app.run(host="0.0.0.0", port=port)
