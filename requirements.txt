@@ -2,3 +2,5 @@ ultralytics
 Pillow
 python-telegram-bot
 httpx
+flask
+gunicorn
