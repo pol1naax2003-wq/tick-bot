@@ -1,10 +1,17 @@
 import os
-import httpx
+import logging
+from flask import Flask, request, jsonify
 from telegram import Update
 from telegram.ext import ApplicationBuilder, CommandHandler, MessageHandler, filters, ContextTypes
 
-API_URL = "http://127.0.0.1:8000/predict"
+logging.basicConfig(level=logging.INFO)
+
 BOT_TOKEN = os.environ.get("BOT_TOKEN", "8949573765:AAFE3XGvRI2pNDeWrxKUpHlOH7YMa17qurA")
+WEBHOOK_SECRET = os.environ.get("WEBHOOK_SECRET", "tick-bot-secret")
+
+app = Flask(__name__)
+
+application = ApplicationBuilder().token(BOT_TOKEN).build()
 
 
 async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
@@ -39,13 +46,29 @@ async def handle_photo(update: Update, context: ContextTypes.DEFAULT_TYPE):
     await update.message.reply_text(text)
 
 
-def main():
-    app = ApplicationBuilder().token(BOT_TOKEN).build()
-    app.add_handler(CommandHandler("start", start))
-    app.add_handler(MessageHandler(filters.PHOTO, handle_photo))
-    print("Бот запущен...")
-    app.run_polling(allowed_updates=Update.ALL_TYPES)
+application.add_handler(CommandHandler("start", start))
+application.add_handler(MessageHandler(filters.PHOTO, handle_photo))
+
+
+@app.route("/", methods=["GET"])
+def health():
+    return "Bot is running"
+
+
+@app.route(f"/{WEBHOOK_SECRET}", methods=["POST"])
+def webhook():
+    data = request.get_json(force=True)
+    update = Update.de_json(data, application.bot)
+    import asyncio
+    asyncio.run(application.process_update(update))
+    return jsonify({"ok": True})
 
 
 if __name__ == "__main__":
-    main()
+    port = int(os.environ.get("PORT", 5000))
+
+    import asyncio
+    asyncio.run(application.initialize())
+    asyncio.run(application.start())
+
+    app.run(host="0.0.0.0", port=port)
